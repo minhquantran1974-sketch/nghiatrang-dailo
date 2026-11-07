@@ -307,7 +307,7 @@ $('more').onclick=()=>{shown+=PAGE;draw()};
 $('reset').onclick=()=>{q.value=qq.value='';[gd,d1,m1,y1,d2,m2,y2,tts,np,sd1,sm1,sy1,sd2,sm2,sy2].forEach(e=>e.value='');unk.checked=onlyflag.checked=grp.checked=sunk.checked=false;filter()};
 function open(r,fromHash){
   const same=rows.filter(x=>x.file===r.file);const photos=[...new Set([r.file,...same.flatMap(x=>x.ex)])];
-  $('lb').innerHTML=`<div class="card">${photos.map(f=>HAS_SPR?`<div class="big" style="${thumbStyle(idx[f])};aspect-ratio:${M.sw}/${M.sh}" role="img" aria-label="Ảnh ngôi mộ ${esc(f)}"></div><p class="sa">Bản gọn chạy không cần mạng chỉ có ảnh thu nhỏ. Mở trang web trên GitHub để xem ảnh rõ nét.</p>`:`<a class="photo" href="anh/${esc(f)}.jpg" target="_blank" rel="noopener" title="Bấm để mở ảnh lớn"><img src="anh/${esc(f)}.jpg" alt="Ảnh ngôi mộ ${esc(f)}" onerror="noimg(this)"></a>`).join('')}
+  $('lb').innerHTML=`<div class="card">${photos.map(f=>HAS_SPR?`<div class="big" style="${thumbStyle(idx[f])};aspect-ratio:${M.sw}/${M.sh}" role="img" aria-label="Ảnh ngôi mộ ${esc(f)}"></div><p class="sa">Bản gọn chạy không cần mạng chỉ có ảnh thu nhỏ. Mở trang web trên GitHub để xem ảnh rõ nét.</p>`:`<a class="photo" href="anh/${esc(f)}.jpg" target="_blank" rel="noopener" title="Bấm để mở ảnh lớn"><img src="anh/${esc(f)}.jpg" data-f="${esc(f)}" alt="Ảnh ngôi mộ ${esc(f)}" onerror="noimg(this)"></a>`).join('')}
    ${same.map(x=>`<h2>${x.tg?esc(x.tg):'<span class="miss">thiếu tên</span>'}</h2><dl>
     <dt>Tên thánh</dt><dd>${val(x.tt)}</dd><dt>Giới tính</dt><dd>${esc(x.gd)}</dd>
     <dt>Ngày sinh</dt><dd>${val(x.sinh)}</dd><dt>Ngày mất</dt><dd>${val(x.mat)}</dd>
@@ -318,7 +318,9 @@ function open(r,fromHash){
   $('lb').hidden=false;$('cl').focus();
   if(!fromHash)try{history.replaceState(null,'','#'+r.file.replace(/_/g,'-'))}catch(e){}
 }
-function noimg(im){const d=document.createElement('div');d.className='noimg';d.textContent='Chưa tải được ảnh '+im.getAttribute('src')+'. Hãy kiểm tra thư mục anh đã được tải lên GitHub cùng cấp với index.html.';im.closest('a').replaceWith(d)}
+function noimg(im){const f=im.dataset.f,a=im.closest('a');
+  if(!im.dataset.t){im.dataset.t='1';im.src=f+'.jpg';a.href=f+'.jpg';return}   // không có trong thư mục anh thì thử ngay thư mục gốc
+  const d=document.createElement('div');d.className='noimg';d.textContent='Chưa tải được ảnh '+f+'.jpg (đã thử thư mục anh và thư mục gốc). Hãy kiểm tra ảnh đã được tải lên GitHub cùng cấp với index.html.';a.replaceWith(d)}
 function close(){$('lb').hidden=true;try{history.replaceState(null,'',location.pathname)}catch(e){}}
 $('lb').addEventListener('click',e=>{if(e.target.id==='lb'||e.target.id==='cl')close();const b=e.target.closest('.ed');if(b)editForm(b.dataset.ma,b);const s=e.target.closest('.sv');if(s)saveEdit(s.dataset.ma);const c=e.target.closest('.cn');if(c){const r=rows.find(x=>x.ma===c.dataset.ma);if(r)open(r,true)}});
 const LS={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
