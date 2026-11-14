@@ -95,6 +95,7 @@ details.adv .grid{padding:4px 12px 8px;grid-template-columns:1fr 1fr}
   .stt{display:none}
   .th{width:72px;height:57px}
 }
+.addb{margin-top:8px}.pb{border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:8px}.pb h3{margin:0;font-size:15px}.pv{max-width:100%;max-height:260px;border-radius:6px;display:block}.err{color:var(--warn-fg);background:var(--warn-bg);padding:8px 10px;border-radius:6px;font-size:13px}
 .eform{display:grid;gap:8px;margin-top:10px}.eform label{margin:0}.eform hr{border:0;border-top:1px solid var(--line);width:100%}
 </style>
 
@@ -102,6 +103,7 @@ details.adv .grid{padding:4px 12px 8px;grid-template-columns:1fr 1fr}
   <header>
     <h1>Phần mộ Nghĩa trang GX Đại Lộ</h1>
     <p class="sub" id="sub"></p>
+    <button id="addb" type="button" class="primary addb" hidden>+ Thêm ngôi mộ mới</button>
   </header>
   <div class="bar">
     <div class="grid">
@@ -189,14 +191,14 @@ function pdate(s){s=(s||'').trim();if(!s||/^thi[eế]u$/i.test(s))return {t:'',y
   return {t:s,y:0,m:0,d:0}}
 const miss=s=>{s=(s||'').trim();return /^thi[eế]u$/i.test(s)?'':s};
 function flagOf(tt,tg,s,m,old){const x=[];if(!tg)x.push('thiếu tên');if(!tt)x.push('thiếu tên thánh');if(!s.y)x.push('thiếu ngày sinh');if(!m.y)x.push('thiếu ngày mất');
-  if(x.length>=3||!tg)x.push('thông tin không đủ');let f=x.join(', ');if(/mờ|che/i.test(old||''))f+=(f?'; ':'')+'chữ mờ/che, cần đối chiếu ảnh';return f}
+  if(x.length>=3||!tg)x.push('thông tin không đủ');let f=x.join(', ');if(/Mới thêm/i.test(old||''))f+=(f?'; ':'')+'mới thêm qua web, chờ kiểm tra';if(/mờ|che/i.test(old||''))f+=(f?'; ':'')+'chữ mờ/che, cần đối chiếu ảnh';return f}
 function fromCSV(txt){return fromRows(parseCSV(txt))}
 function fromRows(T){
   const h=T[0].map(x=>norm(x));const col=n=>{const k=norm(n),e=h.indexOf(k);return e>=0?e:h.findIndex(x=>x.startsWith(k))};
   const c={tt:col('Tên thánh'),tg:col('Tên gọi'),s:col('Ngày sinh'),m:col('Ngày mất'),q:col('Quê quán'),k:col('Thông tin khác'),g:col('Giới tính'),a:col('Tuổi'),f:col('Tên file'),fl:col('Ghi chú kiểm tra'),ma:col('Mã')};
   if(c.tg<0||c.m<0)throw new Error('Bảng không đúng cấu trúc');
   const out=[];let n=0;
-  for(const r of T.slice(1)){if(!r.some(x=>x&&x.trim()))continue;n++;
+  for(const r of T.slice(1)){if(!r.some(x=>x&&String(x).trim()))continue;n++;
     const s=pdate(r[c.s]),m=pdate(r[c.m]);const fcell=(r[c.f]||'').trim();const file=fcell.split(/[\s(]/)[0];
     const ex=(fcell.match(/\(\+([^)]*)\)/)||[,''])[1].split(',').map(x=>x.trim()).filter(Boolean);
     let ag=parseInt(r[c.a]);if(isNaN(ag))ag=(s.y&&m.y&&m.y-s.y>=0&&m.y-s.y<115)?m.y-s.y:'';
@@ -210,6 +212,8 @@ if(API){
 }
 let shown=PAGE,cur=[];
 const HAS_SPR=typeof SPRU!=='undefined';
+const isDrive=f=>/^DRIVE:/.test(f||''),dId=f=>f.slice(6),dThumb=(f,w)=>`https://drive.google.com/thumbnail?id=${encodeURIComponent(dId(f))}&sz=w${w}`;
+const thumbOf=r=>isDrive(r.file)?`background-image:url(${dThumb(r.file,240)});background-size:cover;background-position:center`:thumbStyle(r.pi);
 const imgL=f=>HAS_SPR?`url(${SPRU['sp/'+f]})`:`url(${f}),url(sp/${f})`;   // thử cả thư mục gốc lẫn thư mục sp
 const rep=s=>HAS_SPR?s:s+','+s;
 function thumbStyle(i){if(i==null)return '';const s=Math.floor(i/M.per),k=i%M.per,c=k%M.sc,r=Math.floor(k/M.sc);
@@ -271,11 +275,11 @@ function draw(){
   if(!view.length){el.innerHTML='<div class="empty">Không có kết quả. Thử mở rộng khoảng thời gian hoặc bỏ bớt bộ lọc.</div>';$('more').hidden=true;return}
   const nm=r=>r.tg?esc(r.tg):'<span class="miss">thiếu tên</span>';
   el.innerHTML=view.slice(0,shown).map((v,i)=>{const r=v.r;
-    if(grp.checked)return `<button class="row g" data-i="${i}" type="button"><span class="th" style="${thumbStyle(r.pi)}"></span>
+    if(grp.checked)return `<button class="row g" data-i="${i}" type="button"><span class="th" style="${thumbOf(r)}"></span>
       <span><span class="sa">Mộ có ${v.people.length} người</span><span class="people">${v.people.map(p=>`<span><b>${nm(p)}</b> · ${p.tt?esc(p.tt):'<span class="miss">thiếu tên thánh</span>'}${p.gd!=='Chưa rõ'?' · '+p.gd:''} · Sinh ${val(p.sinh)} · Mất ${val(p.mat)}${p.ag!==''?` · ${hl(p.ag)} ${p.ag} tuổi`:''}</span>`).join('')}</span></span></button>`;
     const others=rows.filter(x=>x.file===r.file&&x!==r);
     return `<button class="row" data-i="${i}" type="button">
-    <span class="stt">${r.stt}</span><span class="th" style="${thumbStyle(r.pi)}"></span>
+    <span class="stt">${r.stt}</span><span class="th" style="${thumbOf(r)}"></span>
     <span><span class="nm">${nm(r)}</span> <span class="sa">· ${r.tt?esc(r.tt):'<span class="miss">thiếu tên thánh</span>'}${r.gd!=='Chưa rõ'?' · '+r.gd:''}</span>
       <span class="kv"><span><b>Sinh:</b> ${val(r.sinh)}</span><span><b>Mất:</b> ${val(r.mat)}</span><span><b>Quê quán:</b> ${val(r.que)}</span>${r.ag!==''?`<span><b>${hl(r.ag)}:</b> ${r.ag} tuổi</span>`:''}</span>
       ${others.length?`<span class="same">Cùng mộ với: ${others.map(x=>esc(x.tg||'(thiếu tên)')).join(', ')}</span>`:''}
@@ -307,22 +311,23 @@ $('more').onclick=()=>{shown+=PAGE;draw()};
 $('reset').onclick=()=>{q.value=qq.value='';[gd,d1,m1,y1,d2,m2,y2,tts,np,sd1,sm1,sy1,sd2,sm2,sy2].forEach(e=>e.value='');unk.checked=onlyflag.checked=grp.checked=sunk.checked=false;filter()};
 function open(r,fromHash){
   const same=rows.filter(x=>x.file===r.file);const photos=[...new Set([r.file,...same.flatMap(x=>x.ex)])];
-  $('lb').innerHTML=`<div class="card">${photos.map(f=>HAS_SPR?`<div class="big" style="${thumbStyle(idx[f])};aspect-ratio:${M.sw}/${M.sh}" role="img" aria-label="Ảnh ngôi mộ ${esc(f)}"></div><p class="sa">Bản gọn chạy không cần mạng chỉ có ảnh thu nhỏ. Mở trang web trên GitHub để xem ảnh rõ nét.</p>`:`<a class="photo" href="anh/${esc(f)}.jpg" target="_blank" rel="noopener" title="Bấm để mở ảnh lớn"><img src="anh/${esc(f)}.jpg" data-f="${esc(f)}" alt="Ảnh ngôi mộ ${esc(f)}" onerror="noimg(this)"></a>`).join('')}
+  $('lb').innerHTML=`<div class="card">${photos.map(f=>isDrive(f)?`<a class="photo" href="https://drive.google.com/file/d/${esc(encodeURIComponent(dId(f)))}/view" target="_blank" rel="noopener" title="Bấm để mở ảnh lớn"><img src="${dThumb(f,1600)}" data-f="${esc(f)}" alt="Ảnh ngôi mộ mới thêm" onerror="noimg(this)"></a>`:HAS_SPR?`<div class="big" style="${thumbStyle(idx[f])};aspect-ratio:${M.sw}/${M.sh}" role="img" aria-label="Ảnh ngôi mộ ${esc(f)}"></div><p class="sa">Bản gọn chạy không cần mạng chỉ có ảnh thu nhỏ. Mở trang web trên GitHub để xem ảnh rõ nét.</p>`:`<a class="photo" href="anh/${esc(f)}.jpg" target="_blank" rel="noopener" title="Bấm để mở ảnh lớn"><img src="anh/${esc(f)}.jpg" data-f="${esc(f)}" alt="Ảnh ngôi mộ ${esc(f)}" onerror="noimg(this)"></a>`).join('')}
    ${same.map(x=>`<h2>${x.tg?esc(x.tg):'<span class="miss">thiếu tên</span>'}</h2><dl>
     <dt>Tên thánh</dt><dd>${val(x.tt)}</dd><dt>Giới tính</dt><dd>${esc(x.gd)}</dd>
     <dt>Ngày sinh</dt><dd>${val(x.sinh)}</dd><dt>Ngày mất</dt><dd>${val(x.mat)}</dd>
     <dt>Quê quán</dt><dd>${val(x.que)}</dd><dt>${x.ag!==''?hl(x.ag):'Hưởng dương/thọ'}</dt><dd>${x.ag!==''?x.ag+' tuổi':'<span class="miss">thiếu</span>'}</dd>
     <dt>Thông tin khác</dt><dd>${val(x.kh)}</dd></dl>${API?`<div class="acts"><button type="button" class="ed" data-ma="${esc(x.ma)}">Sửa thông tin</button></div>`:''}`).join('')}
-   <dl><dt>Ảnh mộ</dt><dd>${photos.map(f=>esc(f)+'.jpg').join(', ')}</dd></dl>
+   <dl><dt>Ảnh mộ</dt><dd>${photos.map(f=>isDrive(f)?'ảnh tải lên qua web (lưu trên Google Drive)':esc(f)+'.jpg').join(', ')}</dd></dl>
    <div class="acts"><button id="cl" class="primary" type="button">Đóng</button></div></div>`;
   $('lb').hidden=false;$('cl').focus();
-  if(!fromHash)try{history.replaceState(null,'','#'+r.file.replace(/_/g,'-'))}catch(e){}
+  if(!fromHash&&!isDrive(r.file))try{history.replaceState(null,'','#'+r.file.replace(/_/g,'-'))}catch(e){}
 }
 function noimg(im){const f=im.dataset.f,a=im.closest('a');
+  if(isDrive(f)){const d=document.createElement('div');d.className='noimg';d.textContent='Chưa hiện được ảnh mới thêm (Google Drive có thể đang xử lý ảnh, hoặc ảnh chưa được chia sẻ xem). Thử tải lại trang sau ít phút.';a.replaceWith(d);return}
   if(!im.dataset.t){im.dataset.t='1';im.src=f+'.jpg';a.href=f+'.jpg';return}   // không có trong thư mục anh thì thử ngay thư mục gốc
   const d=document.createElement('div');d.className='noimg';d.textContent='Chưa tải được ảnh '+f+'.jpg (đã thử thư mục anh và thư mục gốc). Hãy kiểm tra ảnh đã được tải lên GitHub cùng cấp với index.html.';a.replaceWith(d)}
-function close(){$('lb').hidden=true;try{history.replaceState(null,'',location.pathname)}catch(e){}}
-$('lb').addEventListener('click',e=>{if(e.target.id==='lb'||e.target.id==='cl')close();const b=e.target.closest('.ed');if(b)editForm(b.dataset.ma,b);const s=e.target.closest('.sv');if(s)saveEdit(s.dataset.ma);const c=e.target.closest('.cn');if(c){const r=rows.find(x=>x.ma===c.dataset.ma);if(r)open(r,true)}});
+function close(){$('lb').hidden=true;delete $('lb').dataset.add;try{history.replaceState(null,'',location.pathname)}catch(e){}}
+$('lb').addEventListener('click',e=>{if((e.target.id==='lb'&&!$('lb').dataset.add)||e.target.id==='cl')close();const b=e.target.closest('.ed');if(b)editForm(b.dataset.ma,b);const s=e.target.closest('.sv');if(s)saveEdit(s.dataset.ma);const c=e.target.closest('.cn');if(c){const r=rows.find(x=>x.ma===c.dataset.ma);if(r)open(r,true)}});
 const LS={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 function editForm(ma,btn){
   const r=rows.find(x=>x.ma===ma);if(!r)return;const f=(id,lab,v,ph)=>`<label>${lab}<input id="e_${id}" value="${esc(v)}" ${ph?`placeholder="${ph}"`:''}></label>`;
@@ -350,7 +355,69 @@ async function saveEdit(ma){
     const n=document.createElement('p');n.className='sa';n.textContent=j.changed?`Đã lưu. Số điện thoại này còn sửa được ${j.left} ngôi mộ nữa.`:'Không có thay đổi nào.';$('lb').querySelector('.card').appendChild(n);
   }catch(e){msg.textContent='Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.';document.querySelectorAll('.sv').forEach(b=>b.disabled=false)}
 }
-addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('lb').hidden)close()});
+
+// ===== Thêm ngôi mộ mới =====
+const MAXP=8;let addPhoto='',addForce=false;
+function personBlock(i){const f=(k,l,ph,extra)=>`<label>${l}<input class="p_${k}" ${ph?`placeholder="${ph}"`:''} ${extra||''}></label>`;
+  return `<div class="pb" data-p="1"><h3>Người thứ <span class="pn">${i}</span></h3>
+   ${f('tt','Tên thánh','Giuse, Maria, Phêrô…','list="ttl"')}${f('tg','Tên gọi (họ và tên) *','Nguyễn Văn Hùng')}
+   ${f('sinh','Ngày sinh (dd/mm/yyyy hoặc chỉ năm)','05/07/1944 hoặc 1944')}${f('mat','Ngày mất (dd/mm/yyyy hoặc chỉ năm)','06/12/1992 hoặc 1992')}
+   ${f('que','Quê quán','Hải Dương')}${f('ag','Tuổi (bỏ trống để tự tính)','','inputmode="numeric"')}
+   <label>Giới tính<select class="p_gd"><option value="">Tự nhận biết theo tên</option><option>Nam</option><option>Nữ</option></select></label>
+   ${f('kh','Thông tin khác (nếu có)','Vợ và các con lập mộ')}
+   <div class="acts"><button type="button" class="rmp">Bỏ người này</button></div></div>`}
+function openAdd(){
+  const L=$('lb');L.dataset.add='1';
+  const sts=[...new Set(rows.map(r=>r.tt).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+  L.innerHTML=`<div class="card"><h2>Thêm ngôi mộ mới</h2>
+   <p class="sa">Chọn ảnh ngôi mộ rồi nhập thông tin đọc được trên bia. Cột nào không đọc được thì để trống (hệ thống ghi "thiếu"). Ngôi mộ mới hiện cho mọi người ngay và được đánh dấu "chờ kiểm tra". Mỗi số điện thoại thêm tối đa 5 ngôi mộ mỗi ngày.</p>
+   <datalist id="ttl">${sts.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+   <div class="eform">
+   <label>Số điện thoại của bạn *<input id="a_phone" value="${esc(LS.get('gx_phone'))}" placeholder="0912345678" inputmode="tel"></label>
+   <label>Họ tên của bạn *<input id="a_name" value="${esc(LS.get('gx_name'))}" placeholder="Nguyễn Văn An"></label><hr>
+   <label>Ảnh ngôi mộ * (chụp mới hoặc chọn từ máy)<input id="a_photo" type="file" accept="image/*"></label>
+   <img id="a_prev" class="pv" alt="" hidden>
+   <div id="a_people" style="display:grid;gap:8px">${personBlock(1)}</div>
+   <div class="acts"><button type="button" id="a_more">+ Thêm người cùng mộ</button></div>
+   <p id="a_msg" class="sa" role="status"></p>
+   <div class="acts"><button type="button" class="primary" id="a_ok">Thêm vào danh sách</button> <button type="button" id="a_cancel">Hủy</button></div></div></div>`;
+  L.hidden=false;addPhoto='';addForce=false;$('a_phone').focus();
+}
+function renum(){document.querySelectorAll('#a_people .pb').forEach((b,i)=>b.querySelector('.pn').textContent=i+1)}
+function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{try{let W=1500,q=.72,out='';for(let t=0;t<5;t++){const k=Math.min(1,W/Math.max(im.naturalWidth,im.naturalHeight));
+    const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.naturalWidth*k));c.height=Math.max(1,Math.round(im.naturalHeight*k));
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
+    out=c.toDataURL('image/jpeg',q);if(out.length*.75<1500000)break;W=Math.round(W*.8);q=Math.max(.5,q-.06)}
+    URL.revokeObjectURL(u);ok(out)}catch(e){no(e)}};
+  im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('img'))};im.src=u})}
+async function submitAdd(){
+  const msg=$('a_msg'),ok=$('a_ok');const phone=$('a_phone').value.trim(),name=$('a_name').value.trim();
+  const people=[...document.querySelectorAll('#a_people .pb')].map(b=>{const g=k=>b.querySelector('.p_'+k).value.trim();return {tt:g('tt'),tg:g('tg'),sinh:g('sinh'),mat:g('mat'),que:g('que'),ag:g('ag'),gd:g('gd'),kh:g('kh')}});
+  if(!addPhoto){msg.textContent='Chưa chọn ảnh ngôi mộ.';return}
+  if(people.some(p=>p.tg.length<2)){msg.textContent='Mỗi người cần có tên gọi (họ và tên).';return}
+  msg.className='sa';msg.textContent='Đang gửi ảnh và thông tin, vui lòng chờ…';ok.disabled=true;
+  try{
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'add',phone,name,people,photo:addPhoto.replace(/^data:image\/jpeg;base64,/,''),force:addForce})});
+    const j=await res.json();
+    if(!j.ok){ok.disabled=false;msg.className='err';msg.textContent=j.error||'Không thêm được.';
+      if(j.duplicate==='soft'){addForce=true;ok.textContent='Vẫn thêm (đây là người khác)'}return}
+    LS.set('gx_phone',phone);LS.set('gx_name',name);
+    msg.textContent='Đã thêm. Đang cập nhật danh sách…';
+    let r2=null;try{const d=await (await fetch(API+(API.includes('?')?'&':'?')+'_='+Date.now(),{cache:'no-store'})).json();if(d.ok){applyRows(fromRows(d.rows));r2=rows.find(x=>x.file===j.file)}}catch(e){}
+    if(r2){open(r2,true);const n=document.createElement('p');n.className='sa';n.textContent=`Đã thêm ${j.added} người. Ngôi mộ được đánh dấu "chờ kiểm tra".`;$('lb').querySelector('.card').appendChild(n)}
+    else{delete $('lb').dataset.add;$('lb').innerHTML='<div class="card"><h2>Đã thêm</h2><p>Đã lưu '+j.added+' người. Tải lại trang để xem.</p><div class="acts"><button id="cl" class="primary" type="button">Đóng</button></div></div>'}
+  }catch(e){ok.disabled=false;msg.className='err';msg.textContent='Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại (ảnh chưa được thêm).'}
+}
+$('lb').addEventListener('click',e=>{if(!$('lb').dataset.add)return;const id=e.target.id;
+  if(id==='a_more'){const n=document.querySelectorAll('#a_people .pb').length;if(n>=MAXP)return;$('a_people').insertAdjacentHTML('beforeend',personBlock(n+1))}
+  else if(e.target.classList.contains('rmp')){const bs=document.querySelectorAll('#a_people .pb');if(bs.length>1){e.target.closest('.pb').remove();renum()}}
+  else if(id==='a_cancel')close();else if(id==='a_ok')submitAdd()});
+$('lb').addEventListener('change',async e=>{if(e.target.id!=='a_photo')return;const f=e.target.files[0],m=$('a_msg'),p=$('a_prev');addPhoto='';p.hidden=true;if(!f)return;
+  try{m.className='sa';m.textContent='Đang xử lý ảnh…';addPhoto=await shrink(f);p.src=addPhoto;p.hidden=false;m.textContent='Ảnh đã sẵn sàng ('+Math.round(addPhoto.length*.75/1024)+' KB).'}
+  catch(x){m.className='err';m.textContent='Không đọc được ảnh này. Hãy chọn ảnh JPG hoặc PNG khác.'}});
+if(API){$('addb').hidden=false;$('addb').onclick=openAdd}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('lb').hidden&&!$('lb').dataset.add)close()});
 function fromHash(){const h=decodeURIComponent(location.hash.slice(1)).replace(/-/g,'_');if(!h)return;const r=rows.find(x=>x.file===h||x.ex.includes(h));if(r)open(r,true)}
 addEventListener('hashchange',fromHash);
 setup();filter();fromHash();
