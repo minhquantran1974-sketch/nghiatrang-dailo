@@ -103,7 +103,7 @@ details.adv .grid{padding:4px 12px 8px;grid-template-columns:1fr 1fr}
   <header>
     <h1>Phần mộ Nghĩa trang GX Đại Lộ</h1>
     <p class="sub" id="sub"></p>
-    <button id="addb" type="button" class="primary addb" hidden>+ Thêm ngôi mộ mới</button>
+    <button id="addb" type="button" class="primary addb" hidden>+ Thêm ngôi mộ mới</button> <button id="gib" type="button" class="addb" hidden>Ngày giỗ trong tuần (quản trị)</button>
   </header>
   <div class="bar">
     <div class="grid">
@@ -417,6 +417,39 @@ $('lb').addEventListener('change',async e=>{if(e.target.id!=='a_photo')return;co
   try{m.className='sa';m.textContent='Đang xử lý ảnh…';addPhoto=await shrink(f);p.src=addPhoto;p.hidden=false;m.textContent='Ảnh đã sẵn sàng ('+Math.round(addPhoto.length*.75/1024)+' KB).'}
   catch(x){m.className='err';m.textContent='Không đọc được ảnh này. Hãy chọn ảnh JPG hoặc PNG khác.'}});
 if(API){$('addb').hidden=false;$('addb').onclick=openAdd}
+
+// ===== Quản trị: ngày giỗ trong tuần (chỉ hiện khi đã nhập mã quản trị) =====
+const dmy=d=>('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2),TH=['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+const isoD=d=>d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+function giList(start){const days=[];for(let i=0;i<7;i++){const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);days.push(d)}
+  const out=days.map(d=>({d,items:rows.filter(r=>r.mm===d.getMonth()+1&&r.dd===d.getDate()&&r.yy&&d.getFullYear()-r.yy>0).sort((a,b)=>a.yy-b.yy)}));return out}
+function giText(L){const a=L[0].d,b=L[6].d;let s=`NGÀY GIỖ TRONG TUẦN (${dmy(a)} – ${dmy(b)}/${b.getFullYear()}) – Giáo xứ Đại Lộ\n`;let n=0;
+  L.forEach(({d,items})=>{if(!items.length)return;s+=`\n${TH[d.getDay()]}, ${dmy(d)}/${d.getFullYear()}:\n`;items.forEach(r=>{n++;s+=` - ${[r.tt,r.tg].filter(Boolean).join(' ')} – giỗ lần thứ ${d.getFullYear()-r.yy} (mất ${r.mat})${r.ag!==''?`, ${r.ag<60?'hưởng dương':'hưởng thọ'} ${r.ag} tuổi`:''}\n`})});
+  if(!n)s+='\n(Không có ngày giỗ nào trong tuần này.)\n';else s+=`\nTổng cộng ${n} người. Xin cộng đoàn cầu nguyện cho các linh hồn.\n`;return s}
+function openGio(start){
+  start=start||new Date();const L=giList(start),txt=giText(L),noD=rows.filter(r=>r.yy&&!r.dd).length;
+  const lb=$('lb');lb.dataset.add='1';
+  lb.innerHTML=`<div class="card"><h2>Ngày giỗ trong tuần</h2>
+   <p class="sa">Chỉ quản trị viên thấy mục này. Tính theo ngày mất dương lịch ghi trên bia; người không rõ ngày/tháng mất không được tính (${noD} người chỉ có năm mất${rows.filter(r=>!r.yy).length?`, ${rows.filter(r=>!r.yy).length} người không có năm mất`:''}).</p>
+   <div class="acts"><label style="margin:0">Từ ngày <input id="g_d" type="date" value="${isoD(start)}"></label>
+    <button type="button" id="g_t">Hôm nay</button><button type="button" id="g_w">Tuần này (T2–CN)</button><button type="button" id="g_n">Tuần sau</button></div>
+   <textarea id="g_txt" rows="14" style="width:100%;margin-top:8px;font:14px/1.4 system-ui;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg,#fff);color:inherit" readonly>${esc(txt)}</textarea>
+   <p id="g_msg" class="sa" role="status"></p>
+   <div class="acts"><button type="button" class="primary" id="g_cp">Sao chép để đăng tin</button><button id="cl" type="button">Đóng</button></div></div>`;lb.hidden=false}
+function monday(off){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7)+off);return d}
+$('lb').addEventListener('click',e=>{if(!$('lb').dataset.add)return;const id=e.target.id;
+  if(id==='g_t')openGio(new Date());else if(id==='g_w')openGio(monday(0));else if(id==='g_n')openGio(monday(7));
+  else if(id==='g_cp'){const ta=$('g_txt');ta.select();const ok=()=>$('g_msg').textContent='Đã sao chép. Dán vào tin của Giáo xứ.';const no=()=>{try{document.execCommand('copy')?ok():$('g_msg').textContent='Hãy giữ và chọn Sao chép trên khung văn bản.'}catch(x){$('g_msg').textContent='Hãy giữ và chọn Sao chép trên khung văn bản.'}};
+    (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(ta.value).then(ok,no):no())}});
+$('lb').addEventListener('change',e=>{if(e.target.id==='g_d'&&e.target.value){const p=e.target.value.split('-');openGio(new Date(+p[0],+p[1]-1,+p[2]))}});
+async function adminCheck(code){try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'admin',code})});return await r.json()}catch(e){return {ok:false,error:'Không kết nối được máy chủ.'}}}
+function showAdmin(){$('gib').hidden=false;$('gib').onclick=()=>openGio()}
+if(API){
+  const saved=LS.get('gx_admin');
+  if(saved)adminCheck(saved).then(j=>{if(j.ok)showAdmin();else LS.set('gx_admin','')});
+  if(QS0.get('quantri')){const lb=$('lb');lb.dataset.add='1';lb.innerHTML=`<div class="card"><h2>Đăng nhập quản trị</h2><div class="eform"><label>Mã quản trị<input id="ad_code" type="password" autocomplete="off"></label><p id="ad_msg" class="sa" role="status"></p><div class="acts"><button type="button" class="primary" id="ad_ok">Đăng nhập</button> <button id="cl" type="button">Hủy</button></div></div></div>`;lb.hidden=false;
+    $('ad_ok').onclick=async()=>{const c=$('ad_code').value.trim();$('ad_msg').textContent='Đang kiểm tra…';const j=await adminCheck(c);if(j.ok){LS.set('gx_admin',c);showAdmin();close();try{history.replaceState(null,'',location.pathname)}catch(e){}}else $('ad_msg').textContent=j.error||'Không đúng.'}}
+}
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('lb').hidden&&!$('lb').dataset.add)close()});
 function fromHash(){const h=decodeURIComponent(location.hash.slice(1)).replace(/-/g,'_');if(!h)return;const r=rows.find(x=>x.file===h||x.ex.includes(h));if(r)open(r,true)}
 addEventListener('hashchange',fromHash);
